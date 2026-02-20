@@ -1,32 +1,26 @@
 # app/routers/rooms.py
+import os
 import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
 import pandas as pd
+import requests
 from fastapi import APIRouter, HTTPException, Query
 
 from app.models import Room, RoomImage, RoomWithImages
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 
-# app 패키지 기준 data (app/data)
-APP_ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = APP_ROOT / "data"
-
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 ROOMS_CSV = DATA_DIR / "dummy_rooms.csv"
 IMAGES_CSV = DATA_DIR / "dummy_room_images.csv"
 
-# 백엔드 루트(/app) 기준
-BACKEND_ROOT = APP_ROOT.parent  # .../app
-CULTURE_FILENAME = "문화체육관광부_전국호텔현황_20230405.csv"
-
-# 문화 CSV 후보 경로들 (여기가 핵심!)
-CULTURE_CSV_CANDIDATES = [
-    BACKEND_ROOT / CULTURE_FILENAME,                  # /app/파일명
-    BACKEND_ROOT / "data" / CULTURE_FILENAME,         # /app/data/파일명  ✅ 너 레포 구조
-    DATA_DIR / CULTURE_FILENAME,                      # /app/app/data/파일명
-]
+# 문화체육관광부 전국 호텔 현황 CSV 후보 경로들
+BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
+CULTURE_CSV = BACKEND_ROOT / "문화체육관광부_전국호텔현황_20230405.csv"
+CULTURE_CSV_IN_DATA = DATA_DIR / "문화체육관광부_전국호텔현황_20230405.csv"
+CULTURE_CSV_IN_APP_DATA = Path(__file__).resolve().parent.parent / "data" / "문화체육관광부_전국호텔현황_20230405.csv"
 
 _rooms: List[Room] = []
 _room_images: List[RoomImage] = []
@@ -101,74 +95,79 @@ def generate_korean_description(room_data) -> str:
     return base_desc
 
 
-def _read_csv_robust(csv_path: Path) -> Optional[pd.DataFrame]:
-    """encoding/strip까지 포함해서 최대한 안전하게 CSV 읽기"""
-    if not csv_path.exists():
-        return None
+def _is_git_lfs_pointer(path: Path) -> bool:
+    """CSV가 실제 데이터가 아니라 Git LFS 포인터 파일인지 확인"""
+    try:
+        if not path.exists() or path.stat().st_size > 1024 * 10:
+            return False
+        head = path.read_text(encoding="utf-8", errors="ignore").strip().splitlines()[:2]
+        if not head:
+            return False
+        return "git-lfs.github.com/spec" in head[0]
+    except Exception:
+        return False
 
-    # utf-8-sig 먼저 (BOM 대응)
-    for enc in ("utf-8-sig", "utf-8", "cp949"):
+
+def _download_to(path: Path, url: str) -> bool:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with requests.get(url, stream=True, timeout=30) as r:
+            r.raise_for_status()
+            with open(path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=1024 * 1024):
+                    if chunk:
+                        f.write(chunk)
+        return path.exists() and path.stat().st_size > 0
+    except Exception:
+        return False
+
+
+def _read_csv_robust(csv_path: Path) -> Optional[pd.DataFrame]:
+    # 인코딩 후보
+    encodings = ["utf-8", "utf-8-sig", "cp949", "euc-kr"]
+    last_err = None
+    for enc in encodings:
         try:
             df = pd.read_csv(csv_path, encoding=enc)
             df.columns = df.columns.astype(str).str.strip()
             return df
-        except Exception:
+        except Exception as e:
+            last_err = e
             continue
     return None
 
 
 def _load_culture_hotels() -> bool:
-    """
-    문화체육관광부 전국 호텔 현황 CSV 로드.
-    - 경로를 함수 안에서 직접 계산(스코프 문제 제거)
-    - 후보 경로 다양화
-    - columns strip/encoding 처리
-    - Railway에서 파일이 실제로 들어왔는지 로그로 확인 가능
-    """
     global _rooms, _room_images, _room_image_map
 
-    # ✅ 후보 경로를 "함수 안에서" 계산 (스코프 에러 제거)
-    backend_root = Path(__file__).resolve().parent.parent.parent  # .../budgetpilot-backend
-    data_dir = Path(__file__).resolve().parent.parent / "data"    # .../budgetpilot-backend/app/data
+    candidates = [CULTURE_CSV, CULTURE_CSV_IN_DATA, CULTURE_CSV_IN_APP_DATA]
+    csv_path = next((p for p in candidates if p.exists()), None)
 
-    filename = "문화체육관광부_전국호텔현황_20230405.csv"
+    # ✅ LFS 포인터면 release에서 다운받아서 tmp에 저장
+    url = os.getenv("CULTURE_CSV_URL", "").strip()
+    if csv_path and _is_git_lfs_pointer(csv_path) and url:
+        tmp_path = Path("/tmp") / csv_path.name
+        if _download_to(tmp_path, url):
+            csv_path = tmp_path
 
-    culture_candidates = [
-        backend_root / filename,          # budgetpilot-backend/파일.csv
-        backend_root / "data" / filename, # budgetpilot-backend/data/파일.csv  ← 너 현재 구조
-        data_dir / filename,              # budgetpilot-backend/app/data/파일.csv
-    ]
+    # ✅ 로컬에 파일이 아예 없으면 (배포에서) URL로만도 시도
+    if not csv_path and url:
+        tmp_path = Path("/tmp") / "문화체육관광부_전국호텔현황_20230405.csv"
+        if _download_to(tmp_path, url):
+            csv_path = tmp_path
 
-    csv_path = next((p for p in culture_candidates if p.exists()), None)
-
-    # ✅ 디버그 로그
-    print("[CULTURE] candidates:", [str(p) for p in culture_candidates])
-    print("[CULTURE] exists:", [(str(p), p.exists()) for p in culture_candidates])
-    print("[CULTURE] chosen:", str(csv_path))
-
-    if not csv_path:
+    if not csv_path or not csv_path.exists():
         return False
 
-    try:
-        df = _read_csv_robust(csv_path)
-    except Exception as e:
-        print("[CULTURE] read failed:", repr(e))
+    df = _read_csv_robust(csv_path)
+    if df is None:
         return False
 
-    print("[CULTURE] columns:", list(df.columns))
-    print("[CULTURE] rows:", len(df))
-
-    # ✅ 컬럼명 strip했는데도 혹시 다른 이름이면 대비 (너 CSV 헤더 확인)
-    # 기대: "호텔명", "지역" / 혹은 "호텔명 ", " 지역" 같은 경우 strip로 해결됨
-    if "호텔명" not in df.columns or "지역" not in df.columns:
-        print("[CULTURE] missing required columns:", {"호텔명": "호텔명" in df.columns, "지역": "지역" in df.columns})
+    # required columns
+    required = {"호텔명", "지역"}
+    if not required.issubset(set(df.columns)):
         return False
 
-    if len(df) == 0:
-        print("[CULTURE] empty dataframe")
-        return False
-
-    # ✅ 실제 파싱
     _rooms = []
     _room_image_map = {}
 
@@ -176,17 +175,17 @@ def _load_culture_hotels() -> bool:
         star = _star_from_grade(str(row.get("결정 등급", "3성")))
         star = max(1, min(5, star))
 
-        title = str(row.get("호텔명", "") or "").strip()
-        address = str(row.get("주소", "") or "").strip()
-        region = str(row.get("지역", "") or "").strip()
+        title = str(row.get("호텔명", "")).strip()
+        address = str(row.get("주소", "")).strip()
+        region = str(row.get("지역", "")).strip()
 
         if not title:
             continue
 
         room_count = 0
         try:
-            room_count = int(float(row.get("객실수", 0) or 0))
-        except Exception:
+            room_count = int(row.get("객실수", 0) or 0)
+        except (ValueError, TypeError):
             room_count = 0
 
         daily_price = STAR_DEFAULT_PRICE.get(star, 80_000)
@@ -194,8 +193,8 @@ def _load_culture_hotels() -> bool:
             daily_price = int(daily_price * (0.9 + (idx % 20) / 200.0))
 
         description = f"{region} {star}성급 호텔입니다. 객실 {room_count}개 보유."
-
         room_id = idx + 1
+
         _rooms.append(
             Room(
                 room_id=room_id,
@@ -218,23 +217,27 @@ def _load_culture_hotels() -> bool:
                 review_count=room_count * 2 if room_count else 10,
             )
         )
+
         _room_image_map[room_id] = STAR_IMAGES.get(star, STAR_IMAGES[3])[:]
 
     _room_images = []
     return len(_rooms) > 0
-    
 
 
 def load_data():
     global _rooms, _room_images, _room_image_map
 
-    # 1) 문화 CSV 우선
-    if _load_culture_hotels():
-        return
+    try:
+        if _load_culture_hotels():
+            return
+    except Exception:
+        pass
 
-    # 2) fallback dummy
-    df_rooms = _read_csv_robust(ROOMS_CSV)
-    if df_rooms is None:
+    # fallback: dummy rooms
+    try:
+        df_rooms = pd.read_csv(ROOMS_CSV)
+        df_rooms.columns = df_rooms.columns.astype(str).str.strip()
+    except Exception:
         _rooms = []
         _room_image_map = {}
         return
@@ -268,11 +271,12 @@ def load_data():
             "title": str(row.get("title", "") or ""),
             "address": str(row.get("address", "") or ""),
         }
+
         korean_description = generate_korean_description(room_data)
 
         _rooms.append(
             Room(
-                room_id=_to_int(row.get("room_id", 0), 0),
+                room_id=_to_int(row.get("room_id")),
                 host_id=_to_int(row.get("host_id", 1), 1),
                 title=room_data["title"],
                 description=korean_description,
@@ -293,17 +297,20 @@ def load_data():
             )
         )
 
-    df_images = _read_csv_robust(IMAGES_CSV)
+    try:
+        df_images = pd.read_csv(IMAGES_CSV)
+    except Exception:
+        _room_images = []
+        _room_image_map = {}
+        return
+
     _room_images = []
     image_map: Dict[int, List[str]] = {}
-    if df_images is not None and {"room_id", "image_url"}.issubset(set(df_images.columns)):
-        for _, row in df_images.iterrows():
-            room_id = _to_int(row.get("room_id"))
-            image_url = str(row.get("image_url", "") or "")
-            if room_id and image_url:
-                img = RoomImage(room_id=room_id, image_url=image_url)
-                _room_images.append(img)
-                image_map.setdefault(room_id, []).append(img.image_url)
+    for _, row in df_images.iterrows():
+        room_id = int(row.room_id)
+        img = RoomImage(room_id=room_id, image_url=row.image_url)
+        _room_images.append(img)
+        image_map.setdefault(room_id, []).append(img.image_url)
 
     _room_image_map = image_map
 
@@ -345,9 +352,10 @@ def get_room(room_id: int):
     room = next((r for r in _rooms if r.room_id == room_id), None)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
+
     images = _room_image_map.get(room_id, [])
     return RoomWithImages(**room.dict(), images=images)
 
 
-# 서버 시작 시 로딩
+# import 시 로딩
 load_data()
