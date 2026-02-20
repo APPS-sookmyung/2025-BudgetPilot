@@ -15,7 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.routers import rooms, schedule, restaurants
+from app.routers import rooms, schedule, restaurants, attractions
 
 # GET /rooms (끝에 슬래시 없음) 명시 등록
 @app.get("/rooms")
@@ -36,9 +36,19 @@ def get_restaurants(
 ):
     return restaurants.list_restaurants(city_keyword, max_price, limit)
 
+# GET /attractions 관광지 데이터
+@app.get("/attractions")
+def get_attractions(
+    city_keyword: Optional[str] = Query(None),
+    max_price: Optional[int] = Query(None),
+    limit: int = Query(80, ge=1, le=200),
+):
+    return attractions.list_attractions(city_keyword, max_price, limit)
+
 app.include_router(rooms.router)
 app.include_router(schedule.router)
 app.include_router(restaurants.router)
+app.include_router(attractions.router)
 
 # 3) 라우터 등록
 import hotels  # import는 app 생성 후에

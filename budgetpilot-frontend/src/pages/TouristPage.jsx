@@ -191,16 +191,46 @@ const TouristPage = () => {
   ];
 
   useEffect(() => {
-    // TODO: 백엔드 API에서 관광지 데이터 가져오기
-    // 현재는 강릉 지역만 임시 데이터 사용
-    if (region.includes("강릉") || region === "강릉") {
-      setTourists(gangneungTourists);
-    } else {
-      // 다른 지역은 빈 배열 또는 기본 데이터
-      setTourists([]);
-    }
-    setLoading(false);
-  }, [region]);
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams();
+        if (region) params.set("city_keyword", region);
+        if (tourismBudget > 0) params.set("max_price", String(tourismBudget));
+        params.set("limit", "80");
+        const res = await fetch(`${BACKEND_URL}/attractions?${params.toString()}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!cancelled) {
+          const list = Array.isArray(data) ? data : [];
+          setTourists(
+            list.map((a, i) => ({
+              id: a.id || `t-${i}`,
+              name: a.name || "(이름 없음)",
+              location: a.location || "",
+              description: a.description || "",
+              image: a.image || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800",
+              rating: a.rating ?? 4.0,
+              reviewCount: a.reviewCount ?? 0,
+              price: Number(a.price) ?? 0,
+            }))
+          );
+        }
+      } catch (e) {
+        console.warn("관광지 API 실패, 임시 데이터 사용:", e);
+        if (!cancelled) {
+          if (region.includes("강릉") || region === "강릉") {
+            setTourists(gangneungTourists);
+          } else {
+            setTourists([]);
+          }
+        }
+      }
+      if (!cancelled) setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [region, tourismBudget]);
 
   const handleTouristToggle = (touristId, price) => {
     setSelectedTourists((prev) => {
