@@ -2,7 +2,7 @@
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 import requests
@@ -20,7 +20,9 @@ IMAGES_CSV = DATA_DIR / "dummy_room_images.csv"
 BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
 CULTURE_CSV = BACKEND_ROOT / "문화체육관광부_전국호텔현황_20230405.csv"
 CULTURE_CSV_IN_DATA = DATA_DIR / "문화체육관광부_전국호텔현황_20230405.csv"
-CULTURE_CSV_IN_APP_DATA = Path(__file__).resolve().parent.parent / "data" / "문화체육관광부_전국호텔현황_20230405.csv"
+CULTURE_CSV_IN_APP_DATA = (
+    Path(__file__).resolve().parent.parent / "data" / "문화체육관광부_전국호텔현황_20230405.csv"
+)
 
 _rooms: List[Room] = []
 _room_images: List[RoomImage] = []
@@ -98,6 +100,7 @@ def generate_korean_description(room_data) -> str:
 def _is_git_lfs_pointer(path: Path) -> bool:
     """CSV가 실제 데이터가 아니라 Git LFS 포인터 파일인지 확인"""
     try:
+        # 포인터는 보통 매우 작음
         if not path.exists() or path.stat().st_size > 1024 * 10:
             return False
         head = path.read_text(encoding="utf-8", errors="ignore").strip().splitlines()[:2]
@@ -123,18 +126,49 @@ def _download_to(path: Path, url: str) -> bool:
 
 
 def _read_csv_robust(csv_path: Path) -> Optional[pd.DataFrame]:
-    # 인코딩 후보
     encodings = ["utf-8", "utf-8-sig", "cp949", "euc-kr"]
-    last_err = None
     for enc in encodings:
         try:
             df = pd.read_csv(csv_path, encoding=enc)
             df.columns = df.columns.astype(str).str.strip()
             return df
-        except Exception as e:
-            last_err = e
+        except Exception:
             continue
     return None
+
+
+def _pick_col(df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
+    """df.columns에서 후보 중 하나를 찾아 실제 컬럼명을 리턴(대소문자/strip 대응)"""
+    cols_strip = {str(c).strip(): str(c) for c in df.columns}
+    for cand in candidates:
+        if cand in cols_strip:
+            return cols_strip[cand]
+
+    lower_map = {str(c).strip().lower(): str(c) for c in df.columns}
+    for cand in candidates:
+        key = cand.lower()
+        if key in lower_map:
+            return lower_map[key]
+
+    return None
+
+
+def _to_int(v: Any, default: int = 0) -> int:
+    try:
+        if pd.isna(v):
+            return default
+        return int(float(v))
+    except Exception:
+        return default
+
+
+def _to_float(v: Any, default: float = 0.0) -> float:
+    try:
+        if pd.isna(v):
+            return default
+        return float(v)
+    except Exception:
+        return default
 
 
 def _load_culture_hotels() -> bool:
@@ -163,7 +197,6 @@ def _load_culture_hotels() -> bool:
     if df is None:
         return False
 
-    # required columns
     required = {"호텔명", "지역"}
     if not required.issubset(set(df.columns)):
         return False
@@ -227,13 +260,14 @@ def _load_culture_hotels() -> bool:
 def load_data():
     global _rooms, _room_images, _room_image_map
 
+    # 1) 문화 CSV 우선
     try:
         if _load_culture_hotels():
             return
     except Exception:
         pass
 
-    # fallback: dummy rooms
+    # 2) fallback: dummy rooms
     try:
         df_rooms = pd.read_csv(ROOMS_CSV)
         df_rooms.columns = df_rooms.columns.astype(str).str.strip()
@@ -244,22 +278,6 @@ def load_data():
 
     if "room_id" not in df_rooms.columns:
         df_rooms["room_id"] = df_rooms.index + 1
-
-    def _to_int(v, default=0):
-        try:
-            if pd.isna(v):
-                return default
-            return int(float(v))
-        except Exception:
-            return default
-
-    def _to_float(v, default=0.0):
-        try:
-            if pd.isna(v):
-                return default
-            return float(v)
-        except Exception:
-            return default
 
     _rooms = []
     for _, row in df_rooms.iterrows():
@@ -297,9 +315,23 @@ def load_data():
             )
         )
 
+    # 3) dummy images (robust)
     try:
         df_images = pd.read_csv(IMAGES_CSV)
+        df_images.columns = df_images.columns.astype(str).str.strip()
     except Exception:
+        _room_images = []
+        # rooms만 있어도 list_rooms는 작동해야 하니 map 빈 값으로
+        _room_image_map = {}
+        return
+
+    room_id_col = _pick_col(df_images, ["room_id", "roomId", "ROOM_ID", "숙소ID", "숙소_id"])
+    image_url_col = _pick_col(
+        df_images,
+        ["image_url", "imageUrl", "IMAGE_URL", "url", "image", "이미지URL", "이미지_url"],
+    )
+
+    if not room_id_col or not image_url_col:
         _room_images = []
         _room_image_map = {}
         return
@@ -307,10 +339,23 @@ def load_data():
     _room_images = []
     image_map: Dict[int, List[str]] = {}
     for _, row in df_images.iterrows():
-        room_id = int(row.room_id)
-        img = RoomImage(room_id=room_id, image_url=row.image_url)
+        rid = row.get(room_id_col)
+        url = row.get(image_url_col)
+
+        if pd.isna(rid) or pd.isna(url):
+            continue
+
+        rid_int = _to_int(rid, default=-1)
+        if rid_int < 0:
+            continue
+
+        url_str = str(url).strip()
+        if not url_str:
+            continue
+
+        img = RoomImage(room_id=rid_int, image_url=url_str)
         _room_images.append(img)
-        image_map.setdefault(room_id, []).append(img.image_url)
+        image_map.setdefault(rid_int, []).append(url_str)
 
     _room_image_map = image_map
 
