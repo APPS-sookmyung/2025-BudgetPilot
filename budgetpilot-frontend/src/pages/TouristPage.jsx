@@ -66,130 +66,6 @@ const TouristPage = () => {
   const [totalSelectedPrice, setTotalSelectedPrice] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // 강릉 지역 관광지 데이터 (임시)
-  const gangneungTourists = [
-    {
-      id: "t-1",
-      name: "경포해수욕장",
-      location: "강릉시 경포동",
-      rating: 4.6,
-      reviewCount: 1234,
-      price: 0,
-      description: "동해안의 대표적인 해수욕장. 맑은 바다와 넓은 백사장이 아름다운 곳입니다.",
-      image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800",
-    },
-    {
-      id: "t-2",
-      name: "안목해변",
-      location: "강릉시 창해로14번길",
-      rating: 4.7,
-      reviewCount: 987,
-      price: 0,
-      description: "커피거리와 함께 즐길 수 있는 해변. 일출 명소로도 유명합니다.",
-      image: "https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=800",
-    },
-    {
-      id: "t-3",
-      name: "오대산국립공원",
-      location: "강릉시 옥계면",
-      rating: 4.8,
-      reviewCount: 1456,
-      price: 3000,
-      description: "아름다운 산과 계곡이 있는 국립공원. 등산과 자연 감상이 좋습니다.",
-      image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800",
-    },
-    {
-      id: "t-4",
-      name: "강릉 중앙시장",
-      location: "강릉시 중앙시장",
-      rating: 4.4,
-      reviewCount: 567,
-      price: 0,
-      description: "강릉의 전통 시장. 다양한 먹거리와 특산품을 구경할 수 있습니다.",
-      image: "https://images.unsplash.com/photo-1556911220-bff31c812dba?w=800",
-    },
-    {
-      id: "t-5",
-      name: "정동진 해안열차",
-      location: "강릉시 강동면",
-      rating: 4.5,
-      reviewCount: 789,
-      price: 12000,
-      description: "바다를 따라 달리는 해안열차. 로맨틱한 기차 여행을 즐길 수 있습니다.",
-      image: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800",
-    },
-    {
-      id: "t-6",
-      name: "허균허난설생 기념관",
-      location: "강릉시 옥계면",
-      rating: 4.3,
-      reviewCount: 234,
-      price: 5000,
-      description: "조선시대 문인 허균과 허난설생의 생애와 작품을 볼 수 있는 기념관입니다.",
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800",
-    },
-    {
-      id: "t-7",
-      name: "강릉 커피거리",
-      location: "강릉시 창해로14번길",
-      rating: 4.6,
-      reviewCount: 1123,
-      price: 0,
-      description: "전국적으로 유명한 커피 거리. 다양한 카페와 감성적인 분위기를 즐길 수 있습니다.",
-      image: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800",
-    },
-    {
-      id: "t-8",
-      name: "주문진 수산시장",
-      location: "강릉시 주문진읍",
-      rating: 4.5,
-      reviewCount: 456,
-      price: 0,
-      description: "신선한 해산물을 구매할 수 있는 수산시장. 회센터와 함께 즐기기 좋습니다.",
-      image: "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=800",
-    },
-    {
-      id: "t-9",
-      name: "정동진 레일바이크",
-      location: "강릉시 강동면",
-      rating: 4.4,
-      reviewCount: 678,
-      price: 15000,
-      description: "바다를 보며 즐기는 레일바이크. 가족과 연인에게 인기 있는 체험입니다.",
-      image: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800",
-    },
-    {
-      id: "t-10",
-      name: "사천해변",
-      location: "강릉시 사천면",
-      rating: 4.5,
-      reviewCount: 345,
-      price: 0,
-      description: "조용하고 아름다운 해변. 힐링과 휴식을 즐기기 좋은 곳입니다.",
-      image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800",
-    },
-    {
-      id: "t-11",
-      name: "강릉 대관령 양떼목장",
-      location: "강릉시 성산면",
-      rating: 4.7,
-      reviewCount: 890,
-      price: 8000,
-      description: "넓은 초원과 양떼를 볼 수 있는 목장. 사진 찍기 좋은 명소입니다.",
-      image: "https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=800",
-    },
-    {
-      id: "t-12",
-      name: "하슬라아트월드",
-      location: "강릉시 강동면",
-      rating: 4.6,
-      reviewCount: 567,
-      price: 10000,
-      description: "현대 미술 작품을 감상할 수 있는 아트 갤러리. 바다 전망이 아름답습니다.",
-      image: "https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=800",
-    },
-  ];
-
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -214,18 +90,13 @@ const TouristPage = () => {
               rating: a.rating ?? 4.0,
               reviewCount: a.reviewCount ?? 0,
               price: Number(a.price) ?? 0,
+              parkingCount: Number(a.parkingCount) ?? 0,
             }))
           );
         }
       } catch (e) {
-        console.warn("관광지 API 실패, 임시 데이터 사용:", e);
-        if (!cancelled) {
-          if (region.includes("강릉") || region === "강릉") {
-            setTourists(gangneungTourists);
-          } else {
-            setTourists([]);
-          }
-        }
+        console.warn("관광지 API 실패:", e);
+        if (!cancelled) setTourists([]);
       }
       if (!cancelled) setLoading(false);
     })();
@@ -355,6 +226,9 @@ const TouristPage = () => {
 
                     <div className="tourist-meta">
                       <span className="review-count">리뷰 {tourist.reviewCount}개</span>
+                      {tourist.parkingCount > 0 && (
+                        <span className="parking-count">🅿️ 주차 {tourist.parkingCount}대</span>
+                      )}
                     </div>
                   </div>
 

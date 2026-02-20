@@ -291,26 +291,34 @@
 }
 
 .tourist-description {
-  margin: 0;
-  color: #666;
-  font-size: 12px;
-  line-height: 1.5;
+  margin: 8px 0;
+  color: #555;
+  font-size: 13px;
+  line-height: 1.6;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-height: 3.9em;
 }
 
 .tourist-meta {
   display: flex;
   gap: 8px;
   margin-top: 4px;
+  flex-wrap: wrap;
 }
 
 .review-count {
   font-size: 11px;
   color: #999;
+}
+
+.parking-count {
+  font-size: 11px;
+  color: #4a90e2;
+  font-weight: 500;
 }
 
 .tourist-price-section {

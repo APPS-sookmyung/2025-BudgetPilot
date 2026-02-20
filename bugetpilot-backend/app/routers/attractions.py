@@ -29,6 +29,7 @@ ATTR_COLS = [
     "소재지도로명주소",
     "소재지지번주소",
     "관광지소개",
+    "주차가능수",
     "관리기관전화번호",
 ]
 
@@ -96,6 +97,11 @@ def list_attractions(
         addr2 = str(row.get("소재지지번주소", "") or "").strip()
         location = (addr1 + " " + addr2).strip() or name
         desc = str(row.get("관광지소개", "") or "").strip() or f"{name} 관광명소입니다."
+        parking_count = row.get("주차가능수", 0)
+        try:
+            parking_count = int(float(parking_count)) if pd.notna(parking_count) and str(parking_count).strip() else 0
+        except (ValueError, TypeError):
+            parking_count = 0
         phone = str(row.get("관리기관전화번호", "") or "").strip()
         price = DEFAULT_PRICE
         if max_price is not None and price > max_price:
@@ -104,11 +110,12 @@ def list_attractions(
             "id": f"attr-{i}",
             "name": name,
             "location": location[:120],
-            "description": desc[:300],
+            "description": desc,
             "image": PLACEHOLDER_IMAGE,
             "rating": 4.3,
             "reviewCount": 0,
             "price": price,
+            "parkingCount": parking_count,
         })
 
     return results[:limit]

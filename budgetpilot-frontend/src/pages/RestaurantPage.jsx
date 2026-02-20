@@ -57,120 +57,6 @@ const RestaurantPage = () => {
   const [totalSelectedPrice, setTotalSelectedPrice] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // 강릉 지역 식당/카페 데이터 (임시)
-  const gangneungRestaurants = [
-    {
-      id: "r-1",
-      name: "강릉 커피거리 카페",
-      type: "카페",
-      location: "강릉시 창해로14번길",
-      rating: 4.5,
-      reviewCount: 234,
-      price: 15000,
-      description: "강릉 커피거리의 대표 카페. 원두의 깊은 맛과 아늑한 분위기로 유명합니다.",
-      image: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800",
-    },
-    {
-      id: "r-2",
-      name: "안목해변 회센터",
-      type: "식당",
-      location: "강릉시 안목해변",
-      rating: 4.7,
-      reviewCount: 456,
-      price: 35000,
-      description: "신선한 회와 해산물을 맛볼 수 있는 해변 인근 식당. 조식 특선이 인기입니다.",
-      image: "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=800",
-    },
-    {
-      id: "r-3",
-      name: "경포해수욕장 막국수집",
-      type: "식당",
-      location: "강릉시 경포동",
-      rating: 4.3,
-      reviewCount: 189,
-      price: 12000,
-      description: "강릉 특색 막국수와 해물파전이 유명한 식당. 가성비 최고입니다.",
-      image: "https://images.unsplash.com/photo-1526318896980-cf78c088247c?w=800",
-    },
-    {
-      id: "r-4",
-      name: "중앙시장 순두부찌개",
-      type: "식당",
-      location: "강릉시 중앙시장",
-      rating: 4.4,
-      reviewCount: 312,
-      price: 10000,
-      description: "강릉 중앙시장의 대표 맛집. 부드러운 순두부찌개와 밑반찬이 일품입니다.",
-      image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=800",
-    },
-    {
-      id: "r-5",
-      name: "오대산 산채비빔밥",
-      type: "식당",
-      location: "강릉시 옥계면",
-      rating: 4.6,
-      reviewCount: 278,
-      price: 18000,
-      description: "신선한 산채와 나물로 만든 비빔밥. 건강한 한끼 식사로 좋습니다.",
-      image: "https://images.unsplash.com/photo-1572441713132-51c75654db73?w=800",
-    },
-    {
-      id: "r-6",
-      name: "바다뷰 카페",
-      type: "카페",
-      location: "강릉시 강동면",
-      rating: 4.5,
-      reviewCount: 198,
-      price: 13000,
-      description: "동해바다가 보이는 로컬 카페. 감성적인 분위기와 맛있는 디저트가 인기입니다.",
-      image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800",
-    },
-    {
-      id: "r-7",
-      name: "강릉 대게 전문점",
-      type: "식당",
-      location: "강릉시 주문진읍",
-      rating: 4.8,
-      reviewCount: 567,
-      price: 45000,
-      description: "신선한 대게 요리를 맛볼 수 있는 전문점. 특별한 날 추천합니다.",
-      image: "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=800",
-    },
-    {
-      id: "r-8",
-      name: "커피향기",
-      type: "카페",
-      location: "강릉시 옥계면",
-      rating: 4.4,
-      reviewCount: 145,
-      price: 11000,
-      description: "로컬 원두를 직접 볶아 만드는 카페. 진한 커피 향이 일품입니다.",
-      image: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800",
-    },
-    {
-      id: "r-9",
-      name: "해변가 파스타집",
-      type: "식당",
-      location: "강릉시 경포동",
-      rating: 4.3,
-      reviewCount: 223,
-      price: 22000,
-      description: "바다를 보며 즐기는 이탈리안 요리. 로맨틱한 분위기의 레스토랑입니다.",
-      image: "https://images.unsplash.com/photo-1551218808-94e220e084d2?w=800",
-    },
-    {
-      id: "r-10",
-      name: "강릉 전통 찻집",
-      type: "카페",
-      location: "강릉시 중앙시장",
-      rating: 4.6,
-      reviewCount: 167,
-      price: 12000,
-      description: "전통 차와 한과를 즐길 수 있는 찻집. 힐링 타임에 좋습니다.",
-      image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800",
-    },
-  ];
-
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -198,14 +84,8 @@ const RestaurantPage = () => {
           })));
         }
       } catch (e) {
-        console.warn("식당 API 실패, 임시 데이터 사용:", e);
-        if (!cancelled) {
-          if (region.includes("강릉") || region === "강릉") {
-            setRestaurants(gangneungRestaurants);
-          } else {
-            setRestaurants([]);
-          }
-        }
+        console.warn("식당 API 실패:", e);
+        if (!cancelled) setRestaurants([]);
       }
       if (!cancelled) setLoading(false);
     })();
