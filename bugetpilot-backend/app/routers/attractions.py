@@ -31,6 +31,7 @@ ATTR_COLS = [
     "관광지소개",
     "주차가능수",
     "관리기관전화번호",
+    "가격",
 ]
 
 
@@ -43,13 +44,17 @@ def _pick_path(candidates: list) -> Optional[Path]:
 
 def _read_csv(path: Path) -> pd.DataFrame:
     encodings = ["utf-8-sig", "utf-8", "cp949", "euc-kr"]
+    required = [c for c in ATTR_COLS if c != "가격"]
     for enc in encodings:
         try:
             df = pd.read_csv(path, encoding=enc, low_memory=False)
             df.columns = df.columns.astype(str).str.strip()
-            missing = [c for c in ATTR_COLS if c not in df.columns]
+            missing = [c for c in required if c not in df.columns]
             if not missing:
-                return df[ATTR_COLS].copy()
+                out = df[[c for c in ATTR_COLS if c in df.columns]].copy()
+                if "가격" not in out.columns:
+                    out["가격"] = DEFAULT_PRICE
+                return out
             return pd.DataFrame(columns=ATTR_COLS)
         except Exception:
             continue
@@ -103,7 +108,10 @@ def list_attractions(
         except (ValueError, TypeError):
             parking_count = 0
         phone = str(row.get("관리기관전화번호", "") or "").strip()
-        price = DEFAULT_PRICE
+        try:
+            price = int(float(row.get("가격", DEFAULT_PRICE) or 0)) if pd.notna(row.get("가격")) else DEFAULT_PRICE
+        except (ValueError, TypeError):
+            price = DEFAULT_PRICE
         if max_price is not None and price > max_price:
             continue
         results.append({
