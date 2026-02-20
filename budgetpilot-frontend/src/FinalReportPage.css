@@ -456,12 +456,29 @@
 
 /* ========== 인쇄용 스타일 (PDF 저장 시) ========== */
 @media print {
+  /* 전체 문서가 한 뷰포트로 잘리지 않도록 (상세 일정·여행 팁까지 다 나오게) */
+  html,
+  body {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  #root {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+
   .final-report-page {
-    position: static;
-    height: auto;
-    min-height: auto;
-    overflow: visible;
+    position: static !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
     background: #fff;
+    display: block !important; /* flex 해제 → 콘텐츠가 연속으로 흐름 */
   }
 
   /* 인쇄 시 제목 표시 */
@@ -485,12 +502,16 @@
     display: none !important;
   }
 
+  /* 스크롤 영역 제거 → 전체가 연속 페이지로 인쇄 */
   .report-content-wrapper {
-    overflow: visible;
-    height: auto;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
+    display: block !important;
+    flex: none !important;
   }
 
-  /* 인쇄 시 배경 흰색, 여백 */
+  /* 인쇄 시 배경 흰색 */
   body {
     background: #fff !important;
   }
