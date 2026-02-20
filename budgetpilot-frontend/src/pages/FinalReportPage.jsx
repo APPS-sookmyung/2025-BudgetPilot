@@ -399,6 +399,8 @@ const FinalReportPage = () => {
 
       {/* Scrollable Content */}
       <div className="report-content-wrapper">
+        {/* 인쇄 시에만 보이는 제목 (PDF 첫 페이지용) */}
+        <h1 className="print-only-title">여행 일정 리포트</h1>
         {/* Summary Card */}
         <div className="summary-section">
           <div className="summary-card">
@@ -558,13 +560,14 @@ const FinalReportPage = () => {
           </div>
         )}
 
-        {/* Footer */}
+        {/* Footer: 리포트 다운로드 (인쇄 → PDF 저장) */}
         <footer className="report-footer">
           <button
-            className="share-button"
-            onClick={() => alert("공유 기능은 준비 중입니다.")}
+            type="button"
+            className="report-download-button"
+            onClick={() => window.print()}
           >
-            일정 공유하기
+            📄 리포트 다운로드 (PDF 저장)
           </button>
         </footer>
       </div>

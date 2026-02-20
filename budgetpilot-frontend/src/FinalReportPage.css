@@ -130,6 +130,11 @@
   width: 100%;
 }
 
+/* 화면에서는 숨기고, 인쇄 시에만 표시 */
+.print-only-title {
+  display: none;
+}
+
 /* Summary Section */
 .summary-section {
   padding: 16px;
@@ -398,7 +403,7 @@
   background: transparent;
 }
 
-.share-button {
+.report-download-button {
   width: 100%;
   background: linear-gradient(135deg, #51a8ff, #97c6ff);
   color: white;
@@ -411,11 +416,11 @@
   transition: transform 0.2s ease;
 }
 
-.share-button:hover {
+.report-download-button:hover {
   transform: translateY(-1px);
 }
 
-.share-button:active {
+.report-download-button:active {
   transform: translateY(0);
 }
 
@@ -446,5 +451,94 @@
 
   .activity-time {
     min-width: auto;
+  }
+}
+
+/* ========== 인쇄용 스타일 (PDF 저장 시) ========== */
+@media print {
+  .final-report-page {
+    position: static;
+    height: auto;
+    min-height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+
+  /* 인쇄 시 제목 표시 */
+  .print-only-title {
+    display: block !important;
+    margin: 0 0 16px 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a1a;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #e2e8f0;
+  }
+
+  /* 헤더(뒤로가기, 제목) 숨기기 */
+  .report-header {
+    display: none !important;
+  }
+
+  /* 다운로드 버튼 영역 숨기기 */
+  .report-footer {
+    display: none !important;
+  }
+
+  .report-content-wrapper {
+    overflow: visible;
+    height: auto;
+  }
+
+  /* 인쇄 시 배경 흰색, 여백 */
+  body {
+    background: #fff !important;
+  }
+
+  .summary-section,
+  .selected-items-section,
+  .schedule-content,
+  .recommendations-section {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .summary-card,
+  .selected-card,
+  .day-card,
+  .recommendations-card {
+    box-shadow: none;
+    border: 1px solid #e2e8f0;
+    break-inside: avoid;
+  }
+
+  .day-card {
+    margin-bottom: 20px;
+    page-break-inside: avoid;
+  }
+
+  .activity-item {
+    break-inside: avoid;
+  }
+
+  /* 인쇄 시 폰트·색상 정리 */
+  .summary-card h2,
+  .schedule-title,
+  .selected-card h3,
+  .day-header h3,
+  .recommendations-card h3 {
+    color: #1a1a1a;
+    font-weight: 700;
+  }
+
+  .summary-value,
+  .activity-title,
+  .selected-item span {
+    color: #333;
+  }
+
+  .summary-value.highlight,
+  .selected-price {
+    color: #0878a4;
   }
 }
